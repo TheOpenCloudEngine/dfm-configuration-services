@@ -34,6 +34,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.InitializationException;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @Tags({"dfm", "configuration"})
@@ -46,6 +47,8 @@ import java.util.stream.Collectors;
         description = ""
 )
 public class CloudConfigurationService extends AbstractControllerService implements ConfigurationService {
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     public static final PropertyDescriptor PROPERTY_ACCESS_KEY = new PropertyDescriptor
             .Builder().name("S3 Access Key")
@@ -123,11 +126,25 @@ public class CloudConfigurationService extends AbstractControllerService impleme
 
     @Override
     public ConfigurationObject get(String key) {
-        return configurationObjectMap.get(key);
+        lock.lock();  // block until condition holds
+        try {
+            return configurationObjectMap.get(key);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public void reload() {
+        lock.lock();  // block until condition holds
+        try {
+            loadConfiguration();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void loadConfiguration() {
         // 캐슁되어 있는 모든 정보를 삭제한다.
         configurationObjectMap.clear();
 
