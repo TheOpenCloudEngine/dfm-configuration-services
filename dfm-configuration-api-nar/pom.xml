@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.opencloudengine.dfm</groupId>
+        <artifactId>dfm-configuration-services</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>dfm-configuration-api-nar</artifactId>
+    <version>1.0.0</version>
+    <packaging>nar</packaging>
+    <properties>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <source.skip>true</source.skip>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-standard-services-api-nar</artifactId>
+            <version>1.19.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.opencloudengine.dfm</groupId>
+            <artifactId>dfm-configuration-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+
+</project>
