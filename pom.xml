@@ -21,4 +21,22 @@
         <module>dfm-configuration-nar</module>
     </modules>
 
+    <licenses>
+        <license>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <name>Apache License 2.0</name>
+            <distribution>Open Cloud Engine</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>fharenheit</id>
+            <name>KIM BYOUNG GON</name>
+            <email>fharenheit@gmail.com</email>
+            <organization>Open Cloud Engine</organization>
+            <timezone>UTC+9</timezone>
+        </developer>
+    </developers>
+
 </project>
