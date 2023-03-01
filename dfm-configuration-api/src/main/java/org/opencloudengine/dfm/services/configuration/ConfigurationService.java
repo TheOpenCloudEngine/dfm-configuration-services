@@ -19,12 +19,22 @@ package org.opencloudengine.dfm.services.configuration;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.controller.ControllerService;
-import org.apache.nifi.processor.exception.ProcessException;
 
 @Tags({"mdf", "configuration"})
 @CapabilityDescription("Configuration Service API.")
 public interface ConfigurationService extends ControllerService {
 
-    public String get(String key);
+    /**
+     * Configuration 정보를 반환한다.
+     *
+     * @param key Configuration 정보를 제공할 Key
+     * @return 로딩한 Configuration 정보
+     */
+    org.opencloudengine.dfm.services.configuration.ConfigurationObject get(String key);
+
+    /**
+     * Configuration 정보를 리로딩한다.
+     */
+    void reload();
 
 }

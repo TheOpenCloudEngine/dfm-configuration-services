@@ -16,9 +16,10 @@
  */
 package org.opencloudengine.dfm.services.configuration;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.SupportsSensitiveDynamicProperties;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -29,10 +30,11 @@ import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.expression.AttributeExpression;
 import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.InitializationException;
-import org.apache.nifi.annotation.behavior.DynamicProperty;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Tags({"dfm", "configuration"})
 @SupportsSensitiveDynamicProperties
@@ -45,8 +47,6 @@ import org.apache.nifi.annotation.behavior.DynamicProperty;
 )
 public class CloudConfigurationService extends AbstractControllerService implements ConfigurationService {
 
-    protected static final String CONFIGURATION_PROPERTY_PREFIX = "configuration.path.";
-
     public static final PropertyDescriptor PROPERTY_ACCESS_KEY = new PropertyDescriptor
             .Builder().name("S3 Access Key")
             .displayName("AWS S3 Access Key")
@@ -54,7 +54,6 @@ public class CloudConfigurationService extends AbstractControllerService impleme
             .required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
-
     public static final PropertyDescriptor PROPERTY_SECRET_KEY = new PropertyDescriptor
             .Builder().name("S3 Secret Key")
             .displayName("AWS S3 Secret Key")
@@ -63,7 +62,6 @@ public class CloudConfigurationService extends AbstractControllerService impleme
             .sensitive(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
-
     public static final PropertyDescriptor PROPERTY_BUCKET_NAME = new PropertyDescriptor
             .Builder().name("S3 Bucket Name")
             .displayName("AWS S3 Bucket Name")
@@ -71,7 +69,7 @@ public class CloudConfigurationService extends AbstractControllerService impleme
             .required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
-
+    protected static final String CONFIGURATION_PROPERTY_PREFIX = "configuration.path.";
     private static final List<PropertyDescriptor> properties;
 
     static {
@@ -81,6 +79,9 @@ public class CloudConfigurationService extends AbstractControllerService impleme
         props.add(PROPERTY_BUCKET_NAME);
         properties = Collections.unmodifiableList(props);
     }
+
+    Map<String, ConfigurationObject> configurationObjectMap = new HashMap();
+    private ConfigurationContext context;
 
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -99,34 +100,19 @@ public class CloudConfigurationService extends AbstractControllerService impleme
         return builder.build();
     }
 
-    Map<String, ConfigurationObject> configurationObjectMap = new HashMap();
-
     /**
      * @param context the configuration context
      * @throws InitializationException if unable to create a database connection
      */
     @OnEnabled
     public void onEnabled(final ConfigurationContext context) throws InitializationException {
-        // 캐슁되어 있는 모든 정보를 삭제한다.
-        configurationObjectMap.clear();
+        this.context = context;
 
-        // Enable시 AWS S3에서 로딩하기 위한 가장 기본적인 정보를 획득한다.
-        final String bucketName = context.getProperty(PROPERTY_BUCKET_NAME).evaluateAttributeExpressions().getValue();
-        final String accessKey = context.getProperty(PROPERTY_ACCESS_KEY).evaluateAttributeExpressions().getValue();
-        final String secretKey = context.getProperty(PROPERTY_SECRET_KEY).evaluateAttributeExpressions().getValue();
-
-        // 사용자가 로딩할 Configuration 파일의 위치 정보를 동적 속성을 획득한다.
-        final List<PropertyDescriptor> dynamicProperties = context.getProperties()
-                .keySet()
-                .stream()
-                .filter(PropertyDescriptor::isDynamic)
-                .collect(Collectors.toList());
-
-        if (dynamicProperties.size() > 0) {
-            throw new InitializationException("AWS S3에서 로딩할 Configuration File을 지정하십시오.");
+        try {
+            reload();
+        } catch (Exception e) {
+            throw new InitializationException(e);
         }
-
-
     }
 
     @OnDisabled
@@ -136,8 +122,64 @@ public class CloudConfigurationService extends AbstractControllerService impleme
     }
 
     @Override
-    public String get(String key) {
-        return "";
+    public ConfigurationObject get(String key) {
+        return configurationObjectMap.get(key);
     }
 
+    @Override
+    public void reload() {
+        // 캐슁되어 있는 모든 정보를 삭제한다.
+        configurationObjectMap.clear();
+
+        // Enable시 AWS S3에서 로딩하기 위한 가장 기본적인 정보를 획득한다.
+        final String bucketName = context.getProperty(PROPERTY_BUCKET_NAME).evaluateAttributeExpressions().getValue();
+        final String accessKey = context.getProperty(PROPERTY_ACCESS_KEY).evaluateAttributeExpressions().getValue();
+        final String secretKey = context.getProperty(PROPERTY_SECRET_KEY).evaluateAttributeExpressions().getValue();
+
+        getLogger().info("AWS S3 ==> Access Key : %s, Secret Key : %s, Bucket Name : %s", new Object[]{
+                accessKey, secretKey, bucketName
+        });
+
+        // 사용자가 로딩할 Configuration 파일의 위치 정보를 동적 속성을 획득한다.
+        final List<PropertyDescriptor> dynamicProperties = context.getProperties()
+                .keySet()
+                .stream()
+                .filter(PropertyDescriptor::isDynamic)
+                .collect(Collectors.toList());
+
+        if (dynamicProperties.size() > 0) {
+            throw new RuntimeException("AWS S3에서 로딩할 Configuration File을 지정하십시오.");
+        }
+
+        AmazonS3 s3 = AWSUtils.getS3(accessKey, secretKey);
+
+        for (PropertyDescriptor prop : dynamicProperties) {
+            try {
+                if (prop.getName().startsWith(CONFIGURATION_PROPERTY_PREFIX)) {
+                    final String objectPath = context.getProperty(prop).evaluateAttributeExpressions().getValue();
+                    getLogger().info("Object Path to load : %s", objectPath);
+
+                    S3Object object = s3.getObject(bucketName, objectPath);
+                    String body = IOUtils.readAsString(object.getObjectContent(), false);
+
+                    String extension = FilenameUtils.getExtension(objectPath);
+                    String objectName = FilenameUtils.getName(objectPath);
+                    String prefix = FilenameUtils.getPath(objectPath);
+
+                    ConfigurationObject co = ConfigurationObject.builder()
+                            .objectName(objectName)
+                            .prefix(prefix)
+                            .objectKey(objectPath)
+                            .extension(extension)
+                            .bucketName(bucketName)
+                            .body(body)
+                            .build();
+                    configurationObjectMap.put(prop.getName(), co);
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException("Configuration File Loading Error!", e);
+            }
+        }
+    }
 }
