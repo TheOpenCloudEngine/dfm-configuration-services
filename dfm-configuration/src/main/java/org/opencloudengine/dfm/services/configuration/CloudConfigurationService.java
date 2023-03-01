@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 @CapabilityDescription("Configuration Controller Service implementation of ConfigurationService.")
 @DynamicProperty(
         name = "Configuration property name",
-        value = "Configuration property value (object path)",
+        value = "Configuration property value (object key)",
         expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY,
         description = ""
 )
