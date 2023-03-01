@@ -22,7 +22,7 @@ import org.apache.nifi.util.TestRunners;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class TestStandardMyService {
+public class TestCloudConfigurationService {
 
     @BeforeEach
     public void init() {
@@ -32,10 +32,10 @@ public class TestStandardMyService {
     @Test
     public void testService() throws InitializationException {
         final TestRunner runner = TestRunners.newTestRunner(TestProcessor.class);
-        final StandardMyService service = new StandardMyService();
+        final CloudConfigurationService service = new CloudConfigurationService();
         runner.addControllerService("test-good", service);
 
-        runner.setProperty(service, StandardMyService.MY_PROPERTY, "test-value");
+        runner.setProperty(service, CloudConfigurationService.PROPERTY_SECRET_KEY, "test-value");
         runner.enableControllerService(service);
 
         runner.assertValid(service);
