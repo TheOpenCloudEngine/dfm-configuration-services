@@ -5,7 +5,7 @@ AWS, Azure 등의 Public Cloud의 Storage 서비스에서 Configuration 정보�
 ## 지원하는 Public Cloud
 
 * AWS
-* Azure
+* Azure (TBD)
 
 ## 지원하는 주요 기능
 
@@ -13,7 +13,7 @@ AWS, Azure 등의 Public Cloud의 Storage 서비스에서 Configuration 정보�
 * XML
 * Properties
 * JSON
-* Text
+* Text 등
 
 ## Processor에서 사용하기
 
