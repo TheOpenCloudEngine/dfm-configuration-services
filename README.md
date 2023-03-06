@@ -19,6 +19,14 @@ AWS, Azure 등의 Public Cloud의 Storage 서비스에서 Configuration 정보�
 
 Processor에서 이 Controller Service를 호출하기 위해서 Maven POM에 API를 dependency로 추가하도록 합니다.
 
+```xml
+<dependency>
+  <groupId>org.opencloudengine.dfm</groupId>
+  <artifactId>dfm-configuration-api</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
 ## 사용상 제약사항
 
 * Configuration 파일을 로딩한 후 캐슁을 진행하므로 캐슁된 내용을 변경하고자 하는 경우
